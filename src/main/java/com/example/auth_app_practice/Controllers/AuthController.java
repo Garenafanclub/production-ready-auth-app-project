@@ -1,5 +1,6 @@
 package com.example.auth_app_practice.Controllers;
 
+import com.example.auth_app_practice.DTOs.LoginDto;
 import com.example.auth_app_practice.DTOs.UserDto;
 import com.example.auth_app_practice.Services.AuthService;
 import jakarta.validation.Valid;
@@ -21,5 +22,10 @@ public class AuthController {
     public ResponseEntity<UserDto> registerUser(@Valid @RequestBody UserDto userDto)
     {
         return ResponseEntity.ok(authService.register(userDto));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginDto loginDto) {
+        return ResponseEntity.ok(authService.login(loginDto));
     }
 }
