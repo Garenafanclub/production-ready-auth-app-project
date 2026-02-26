@@ -25,3 +25,11 @@ spring:
 logging:
   level:
     org.springframework.security: DEBUG
+
+
+application:
+  security:
+    jwt:
+      # This looks for a hidden environment variable. If it can't find one (like on your local laptop), it uses the default value after the colon.
+      secret-key: ${JWT_SECRET_KEY:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      expiration: 86400000
