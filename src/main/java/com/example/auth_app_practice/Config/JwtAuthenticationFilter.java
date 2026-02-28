@@ -1,16 +1,72 @@
 package com.example.auth_app_practice.Config;
 
+import com.example.auth_app_practice.Services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(
+            @NotNull HttpServletRequest request,
+            @NotNull HttpServletResponse response,
+            @NotNull FilterChain filterChain) throws ServletException, IOException {
+
+        final String authHeader = request.getHeader("Authentication");
+        final String jwtToken;
+        final String userEmail;
+
+        System.out.println("--- BOUNCER CHECKING DOOR ---");
+        System.out.println("Header found: " + authHeader);
+
+        // 1. Check if they have token...
+        if(authHeader == null || !authHeader.startsWith("Bearer "))
+        {
+            System.out.println("No valid token found. Letting the main security door handle them.");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 2. Extract the token (skip the first 7 characters "Bearer ")
+        jwtToken = authHeader.substring(7);
+        userEmail = jwtService.extractUsername(jwtToken);
+
+        if(userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null)
+        {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+            if(jwtService.isTokenValid(jwtToken, userDetails))
+            {
+                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                         userDetails,
+                        null,
+                         userDetails.getAuthorities()
+                );
+                 usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                 SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            }
+        }
+
+        // Pass the request to the next stage
+        filterChain.doFilter(request, response);
     }
 }
